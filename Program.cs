@@ -9,7 +9,7 @@ using System.Collections.Generic;
 using System.Collections;
 using System.Threading.Tasks;
 using System.Linq;
-using Newtonsoft.Json;
+using System.Text.Json;
 using static System.Math;
 using System.Xml.Linq;
 using System.Diagnostics;
@@ -968,12 +968,56 @@ namespace HelloCS
 
         //}
 
+        public class WeatherForecast
+        {
+            public DateTimeOffset Date { get; set; }
+            public int TemperatureCelsius { get; set; }
+            public string Summary { get; set; }
+        }
+
         ///// <summary>
         ///// This is Main.
         ///// </summary>
         ///// <param name="args">Command line args</param>
         static void Main(string[] args)
         {
+            var weatherForecast = new WeatherForecast
+            {
+                Date = new DateTimeOffset(DateTime.Now),
+                TemperatureCelsius = 10,
+                Summary = "Sunny"
+            };
+            var options = new JsonSerializerOptions()
+            {
+                WriteIndented = true
+            };
+            var data = JsonSerializer.Serialize(weatherForecast, options);
+            Console.Out.WriteLine(data);
+            File.WriteAllText(@"test.json", data);
+            var dataUtf8 = JsonSerializer.SerializeToUtf8Bytes(weatherForecast, options);
+            Console.Out.WriteLine(System.Text.Encoding.Default.GetString(dataUtf8));
+            File.WriteAllBytes(@"test_utf8.json", dataUtf8);
+
+            var weather = JsonSerializer.Deserialize<WeatherForecast>(data);
+            weather.Date = DateTime.Now;
+            weather.Summary = "Rainy";
+            dataUtf8 = JsonSerializer.SerializeToUtf8Bytes(weather, options);
+            Console.Out.WriteLine(System.Text.Encoding.Default.GetString(dataUtf8));
+            weather = JsonSerializer.Deserialize<WeatherForecast>(new ReadOnlySpan<byte>(dataUtf8));
+            data = JsonSerializer.Serialize(weather, options);
+            Console.Out.WriteLine(data);
+
+            try
+            {
+                var jsonDocument = JsonDocument.Parse(data);
+                var rootElement = jsonDocument.RootElement;
+                Console.WriteLine($"Date: {rootElement.GetProperty("Date").GetDateTimeOffset()}, TemperatureCelsius: {rootElement.GetProperty("TemperatureCelsius").GetInt32()}, Summary: {rootElement.GetProperty("Summary").GetString()}");
+            }
+            catch (Exception e)
+            {
+                Console.Out.WriteLine(e);
+            }
+
             //Console.WriteLine("Enter a string to spell-check:");
             //string stringToSpellCheck = Console.ReadLine();
             //string spellingResults;
